@@ -1,0 +1,15 @@
+{
+  "name": "lambda-test-playwright",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "aws-lambda-ric": "^1.0.0",
+    "playwright": "1.7.0"
+  }
+}
