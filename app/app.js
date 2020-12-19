@@ -1,8 +1,6 @@
 const {chromium} = require("playwright");
 exports.lambdaHandler = async (event) => {
-  const url = event['queryStringParameters'].url;
   console.log(event['queryStringParameters']);
-
   try {
     const browser = await chromium.launch({dumpio: true, args: ['--autoplay-policy=user-gesture-required',
     '--disable-background-networking',
@@ -41,13 +39,13 @@ exports.lambdaHandler = async (event) => {
     '--use-gl=swiftshader',
     '--use-mock-keychain',
     '--single-process']});
+    console.log("launched")
     const context = await browser.newContext({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36' });
     const page = await context.newPage();
-    if(url) {
-      await page.goto(url);
-    } else {
-      await page.goto('http://whatsmyuseragent.org/');
-    }
+    const promises = get_commands(event['queryStringParameters'].script, page);
+    console.log("Promises Array: ", promises);
+    const resolved = await Promise.all(promises);
+
     const pdfStream = await page.pdf();
     await browser.close();
     return {
@@ -66,3 +64,45 @@ exports.lambdaHandler = async (event) => {
   }
     
 };
+
+function get_commands(script, page) {
+  const script_string = JSON.parse(script);
+  const promises = [];
+  if(script_string.length > 0) {
+    script_string.forEach((command_object) => {
+      const parsed_command = build_promise(command_object, page)
+      promises.push(parsed_command);
+    })
+  }
+  return promises;
+}
+
+function build_promise(command_object, page) {
+  const {action, url, selector, timeout, value} = command_object;
+  switch (action) {
+    case "goto": {
+      const p = new Promise((resolve, reject) => {
+        resolve(page.goto(url))
+      });
+      return p
+    }
+    case "click": {
+      const p = new Promise((resolve, reject) => {
+        resolve(page.click(selector));
+      });
+      return p
+    }
+    case "fill": {
+      const p = new Promise((resolve, reject) => {
+        resolve(page.fill(selector, value));
+      });
+      return p
+    }
+    case "waitFor": {
+      const p = new Promise((resolve, reject) => {
+        resolve(page.waitFor(timeout));
+      });
+      return p
+    }
+  }
+}
